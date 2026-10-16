@@ -1,0 +1,876 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
+  <title>VinyGestor — Gestão Financeira</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg:#0b1020;
+      --panel:#121a2b;
+      --line:#26334a;
+      --text:#f4f7fb;
+      --muted:#91a0b8;
+      --orange:#ff8a24;
+      --green:#28d69a;
+      --red:#ff667a;
+      --radius:18px;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Arial, sans-serif;
+    }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    .app {
+      display:grid;
+      grid-template-columns:240px minmax(0,1fr);
+      min-height:100vh;
+    }
+    aside {
+      padding:25px 18px;
+      background:#0a0f1d;
+      border-right:1px solid var(--line);
+    }
+    .brand {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:35px;
+    }
+    .logo {
+      width:42px;
+      height:42px;
+      display:grid;
+      place-items:center;
+      border-radius:13px;
+      background:var(--orange);
+      color:#111827;
+      font-size:22px;
+      font-weight:bold;
+    }
+    .brand strong { font-size:19px; }
+    .brand small {
+      display:block;
+      margin-top:4px;
+      color:var(--muted);
+      font-size:10px;
+    }
+    .nav-label {
+      color:#697892;
+      font-size:10px;
+      font-weight:bold;
+      margin-bottom:12px;
+    }
+    .nav { display:grid; gap:8px; }
+    .nav button {
+      padding:13px;
+      border-radius:11px;
+      background:transparent;
+      color:#aab7cc;
+      text-align:left;
+      border:0;
+    }
+    .nav button.active,
+    .nav button:hover {
+      background:#ff8a2420;
+      color:#ffb66f;
+    }
+    main {
+      min-width:0;
+      padding:28px;
+      max-width:1500px;
+      width:100%;
+      margin:auto;
+    }
+    .topbar,.welcome,.panel-head,.section-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:15px;
+    }
+    .eyebrow {
+      color:var(--orange);
+      font-size:11px;
+      font-weight:bold;
+      letter-spacing:1.5px;
+    }
+    h1 { font-size:30px; margin:7px 0 0; }
+    h2 { font-size:17px; }
+    h3 { font-size:14px; margin:0; }
+    .top-actions { display:flex; gap:10px; }
+    .primary {
+      background:var(--orange);
+      color:#171717;
+      padding:12px 15px;
+      border:0;
+      border-radius:10px;
+      font-weight:bold;
+    }
+    .ghost,.month-select,.search {
+      background:var(--panel);
+      color:var(--text);
+      border:1px solid var(--line);
+      padding:10px 12px;
+      border-radius:10px;
+    }
+    .welcome { margin:25px 0 20px; }
+    .welcome p,.sub {
+      color:var(--muted);
+      font-size:12px;
+    }
+    .cards {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      margin-bottom:18px;
+    }
+    .metric,.panel {
+      background:linear-gradient(145deg,#151f32,#111827);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:19px;
+      min-width:0;
+    }
+    .metric-head {
+      display:flex;
+      justify-content:space-between;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .metric-value {
+      font-size:clamp(20px,2vw,27px);
+      font-weight:bold;
+      margin:17px 0 9px;
+      overflow-wrap:anywhere;
+    }
+    .metric-foot { color:var(--muted); font-size:11px; }
+    .positive { color:var(--green); }
+    .negative { color:var(--red); }
+    .grid-main {
+      display:grid;
+      grid-template-columns:1.5fr 1fr;
+      gap:16px;
+      margin-bottom:18px;
+    }
+    .panel-head { margin-bottom:18px; }
+    .chart-wrap {
+      height:245px;
+      position:relative;
+    }
+    .chart-wrap.small { height:190px; }
+    .legend {
+      display:flex;
+      justify-content:center;
+      gap:15px;
+      color:var(--muted);
+      font-size:11px;
+      margin-top:12px;
+    }
+    .dot {
+      display:inline-block;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      margin-right:5px;
+    }
+    .table-tools { display:flex; gap:8px; }
+    .search { min-width:130px; }
+    .table-wrap { overflow-x:auto; }
+    table {
+      width:100%;
+      min-width:650px;
+      border-collapse:collapse;
+    }
+    th {
+      text-align:left;
+      color:#8190a8;
+      font-size:10px;
+      padding:12px 10px;
+      border-bottom:1px solid var(--line);
+    }
+    td {
+      padding:14px 10px;
+      border-bottom:1px solid var(--line);
+      font-size:12px;
+    }
+    .pill {
+      padding:5px 8px;
+      border-radius:30px;
+      font-size:10px;
+      font-weight:bold;
+    }
+    .pill.in { color:var(--green); background:#28d69a18; }
+    .pill.out { color:var(--red); background:#ff667a18; }
+    .amount-in { color:var(--green); font-weight:bold; }
+    .amount-out { color:var(--red); font-weight:bold; }
+    .bottom-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+      margin-top:18px;
+    }
+    .goal-list { display:grid; gap:17px; }
+    .goal-top,.goal-foot {
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+    }
+    .goal-foot {
+      color:var(--muted);
+      font-size:10px;
+      margin-top:7px;
+    }
+    .bar {
+      height:7px;
+      background:#263249;
+      border-radius:20px;
+      overflow:hidden;
+      margin-top:9px;
+    }
+    .bar i {
+      display:block;
+      height:100%;
+      background:var(--orange);
+    }
+    .empty {
+      text-align:center;
+      padding:25px 10px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .muted { color:var(--muted); font-size:10px; margin-top:4px; }
+    .trans-name { font-weight:bold; }
+    .delete-btn {
+      background:transparent;
+      color:var(--muted);
+      border:0;
+      font-size:18px;
+    }
+    .overlay {
+      position:fixed;
+      inset:0;
+      background:#050914d9;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:20;
+    }
+    .overlay.show { display:flex; }
+    .modal {
+      width:min(100%,480px);
+      background:#151f32;
+      border:1px solid #34435c;
+      border-radius:20px;
+      padding:24px;
+    }
+    .modal-head {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:20px;
+    }
+    .close {
+      background:#ffffff10;
+      color:white;
+      border:0;
+      border-radius:8px;
+      width:32px;
+      height:32px;
+      font-size:20px;
+    }
+    .form-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:13px;
+    }
+    .field { display:grid; gap:7px; }
+    .field.full { grid-column:1/-1; }
+    .field label { color:#aab7cc; font-size:11px; }
+    .field input,.field select {
+      width:100%;
+      padding:11px;
+      background:#0d1422;
+      border:1px solid var(--line);
+      color:white;
+      border-radius:9px;
+    }
+    .form-actions {
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      margin-top:20px;
+    }
+    .toast {
+      display:none;
+      position:fixed;
+      right:20px;
+      bottom:20px;
+      background:#1b2b40;
+      border:1px solid #334761;
+      border-radius:12px;
+      padding:14px;
+      z-index:30;
+    }
+    .toast.show { display:block; }
+    @media(max-width:1050px) {
+      .cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .grid-main { grid-template-columns:1fr; }
+    }
+    @media(max-width:700px) {
+      .app { grid-template-columns:1fr; }
+      aside { padding:15px; }
+      .nav { display:flex; overflow-x:auto; }
+      .nav button { white-space:nowrap; }
+      main { padding:18px 12px; }
+      .topbar,.welcome,.section-row {
+        align-items:flex-start;
+        flex-direction:column;
+      }
+      .top-actions { width:100%; }
+      .month-select { flex:1; }
+      .cards { gap:9px; }
+      .metric { padding:13px; }
+      .metric-value { font-size:20px; }
+      .bottom-grid { grid-template-columns:1fr; }
+      .form-grid { grid-template-columns:1fr; }
+      .field.full { grid-column:auto; }
+      .table-tools { width:100%; }
+      .search { min-width:0; width:100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="logo">V</div>
+      <div><strong>VinyGestor</strong>
+        <small>GESTÃO FINANCEIRA PESSOAL</small>
+      </div>
+    </div>
+    <div class="nav-label">MENU PRINCIPAL</div>
+    <nav class="nav">
+      <button class="active" data-view="dashboard">▦ Visão geral</button>
+      <button data-view="transactions">⇄ Movimentações</button>
+      <button data-view="goals">◎ Metas e objetivos</button>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">SEU DINHEIRO, SOB SEU CONTROLE</div>
+        <h1>Visão geral</h1>
+      </div>
+      <div class="top-actions">
+        <select id="monthFilter" class="month-select">
+          <option value="all">Todo o período</option>
+        </select>
+        <button class="primary" id="newTransaction">＋ Nova movimentação</button>
+      </div>
+    </header>
+
+    <div class="welcome">
+      <div>
+        <h2>Olá! 👋 Bem-vindo ao seu painel</h2>
+        <p>Aqui está o resumo da sua vida financeira.</p>
+      </div>
+      <button class="ghost" id="newGoal">＋ Criar meta</button>
+    </div>
+
+    <section class="cards">
+      <article class="metric">
+        <div class="metric-head">Saldo no período <span>◈</span></div>
+        <div class="metric-value" id="balance">R$ 0,00</div>
+        <div class="metric-foot">Entradas menos saídas</div>
+      </article>
+      <article class="metric">
+        <div class="metric-head">Total de entradas <span>↙</span></div>
+        <div class="metric-value positive" id="income">R$ 0,00</div>
+        <div class="metric-foot">Depósitos e recebimentos</div>
+      </article>
+      <article class="metric">
+        <div class="metric-head">Total de saídas <span>↗</span></div>
+        <div class="metric-value negative" id="expense">R$ 0,00</div>
+        <div class="metric-foot">Pagamentos e retiradas</div>
+      </article>
+      <article class="metric">
+        <div class="metric-head">Metas cadastradas <span>◎</span></div>
+        <div class="metric-value" id="goalCount">0</div>
+        <div class="metric-foot">Objetivos financeiros</div>
+      </article>
+    </section>
+
+    <section class="grid-main">
+      <article class="panel">
+        <div class="panel-head">
+          <div><h3>Fluxo financeiro</h3>
+            <div class="sub">Comparativo de entradas e saídas</div>
+          </div>
+          <div class="legend">
+            <span><i class="dot" style="background:#28d69a"></i>Entradas</span>
+            <span><i class="dot" style="background:#ff667a"></i>Saídas</span>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="flowChart"></canvas></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><h3>Distribuição do dinheiro</h3>
+          <div class="sub">Entradas comparadas às saídas</div>
+        </div></div>
+        <div class="chart-wrap small"><canvas id="distributionChart"></canvas></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#28d69a"></i>Entradas</span>
+          <span><i class="dot" style="background:#ff667a"></i>Saídas</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel" id="transactionsPanel">
+      <div class="section-row">
+        <div><h2>Movimentações recentes</h2>
+          <p class="sub">Depósitos, recebimentos, pagamentos e retiradas.</p>
+        </div>
+        <div class="table-tools">
+          <input class="search" id="searchInput" placeholder="Buscar movimentação...">
+          <select class="search" id="typeFilter">
+            <option value="all">Todos os tipos</option>
+            <option value="in">Entradas</option>
+            <option value="out">Saídas</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Descrição</th><th>Categoria</th><th>Data</th>
+            <th>Tipo</th><th>Valor</th><th></th>
+          </tr></thead>
+          <tbody id="transactionRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="bottom-grid" id="goalsPanel">
+      <section class="panel">
+        <div class="panel-head"><div><h3>Metas e objetivos</h3>
+          <div class="sub">Acompanhe seu progresso</div>
+        </div><button class="ghost" id="newGoal2">＋ Nova meta</button></div>
+        <div class="goal-list" id="goalList"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><div><h3>Resumo do período</h3>
+          <div class="sub">Indicadores financeiros</div>
+        </div></div>
+        <div class="goal-list" id="summaryList"></div>
+      </section>
+    </div>
+    <p style="text-align:center;color:#697892;font-size:10px;margin:28px 0">
+      VinyGestor © <span id="year"></span> · Dados salvos neste navegador.
+    </p>
+  </main>
+  
+<div class="overlay" id="transactionModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Nova movimentação</h2>
+      <button class="close" data-close="transactionModal">×</button>
+    </div>
+    <form id="transactionForm">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="description">Descrição</label>
+          <input id="description" required maxlength="80"
+                 placeholder="Ex.: Salário, mercado, depósito">
+        </div>
+        <div class="field">
+          <label for="txType">Tipo</label>
+          <select id="txType">
+            <option value="in">Entrada</option>
+            <option value="out">Saída</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Categoria</label>
+          <select id="category">
+            <option>Salário</option><option>Depósito</option>
+            <option>Vendas</option><option>Investimentos</option>
+            <option>Alimentação</option><option>Moradia</option>
+            <option>Transporte</option><option>Contas</option>
+            <option>Lazer</option><option>Saúde</option>
+            <option>Educação</option><option>Outros</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="amount">Valor (R$)</label>
+          <input id="amount" type="number" min="0.01"
+                 step="0.01" required placeholder="0,00">
+        </div>
+        <div class="field">
+          <label for="txDate">Data</label>
+          <input id="txDate" type="date" required>
+        </div>
+        <div class="field full">
+          <label for="notes">Observação (opcional)</label>
+          <input id="notes" maxlength="120" placeholder="Detalhes adicionais">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" data-close="transactionModal">Cancelar</button>
+        <button type="submit" class="primary">Salvar movimentação</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="goalModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Criar meta financeira</h2>
+      <button class="close" data-close="goalModal">×</button>
+    </div>
+    <form id="goalForm">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="goalName">Nome da meta</label>
+          <input id="goalName" required maxlength="60"
+                 placeholder="Ex.: Comprar um notebook">
+        </div>
+        <div class="field">
+          <label for="goalTarget">Valor desejado (R$)</label>
+          <input id="goalTarget" type="number" min="0.01"
+                 step="0.01" required placeholder="5000">
+        </div>
+        <div class="field">
+          <label for="goalSaved">Já economizado (R$)</label>
+          <input id="goalSaved" type="number" min="0"
+                 step="0.01" value="0" required>
+        </div>
+        <div class="field full">
+          <label for="goalDate">Prazo (opcional)</label>
+          <input id="goalDate" type="date">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" data-close="goalModal">Cancelar</button>
+        <button type="submit" class="primary">Salvar meta</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+  
+<script>
+(() => {
+  const KEY = 'vinygestor_v1';
+  const $ = id => document.getElementById(id);
+  const money = n => Number(n || 0).toLocaleString('pt-BR',{
+    style:'currency',currency:'BRL'
+  });
+  const today = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
+  const dateBR = s => {
+    if(!s) return '—';
+    const [y,m,d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+
+  let state;
+  try {
+    state = JSON.parse(localStorage.getItem(KEY)) || {transactions:[],goals:[]};
+  } catch {
+    state = {transactions:[],goals:[]};
+  }
+  if(!Array.isArray(state.transactions)) state.transactions=[];
+  if(!Array.isArray(state.goals)) state.goals=[];
+  let selectedMonth='all', flowChart, distributionChart;
+
+  function save(){
+    localStorage.setItem(KEY,JSON.stringify(state));
+  }
+  function notify(message){
+    const t=$('toast');
+    t.textContent=message;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2500);
+  }
+  function monthOptions(){
+    const months=[...new Set([
+      today().slice(0,7),
+      ...state.transactions.map(t=>t.date.slice(0,7))
+    ])].sort().reverse();
+    $('monthFilter').innerHTML =
+      '<option value="all">Todo o período</option>' +
+      months.map(m=>{
+        const [y,mo]=m.split('-');
+        const label=new Date(+y,+mo-1,1).toLocaleDateString('pt-BR',{
+          month:'long',year:'numeric'
+        });
+        return `<option value="${m}">${label}</option>`;
+      }).join('');
+    $('monthFilter').value=selectedMonth;
+  }
+  function getTransactions(){
+    const term=$('searchInput').value.trim().toLowerCase();
+    const type=$('typeFilter').value;
+    return state.transactions.filter(t =>
+      (selectedMonth==='all'||t.date.startsWith(selectedMonth)) &&
+      (type==='all'||t.type===type) &&
+      `${t.description} ${t.category} ${t.notes||''}`.toLowerCase().includes(term)
+    ).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt);
+  }
+
+  function render(){
+    monthOptions();
+    const tx=state.transactions.filter(t=>
+      selectedMonth==='all'||t.date.startsWith(selectedMonth)
+    );
+    const incoming=tx.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
+    const outgoing=tx.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+    $('balance').textContent=money(incoming-outgoing);
+    $('balance').className='metric-value '+(incoming<outgoing?'negative':'');
+    $('income').textContent=money(incoming);
+    $('expense').textContent=money(outgoing);
+    $('goalCount').textContent=state.goals.length;
+
+    const rows=getTransactions();
+    $('transactionRows').innerHTML=rows.length ? rows.map(t=>`
+      <tr>
+        <td><div class="trans-name">${esc(t.description)}
+          <div class="muted">${esc(t.notes||'Movimentação financeira')}</div>
+        </div></td>
+        <td>${esc(t.category)}</td>
+        <td>${dateBR(t.date)}</td>
+        <td><span class="pill ${t.type}">${t.type==='in'?'Entrada':'Saída'}</span></td>
+        <td class="${t.type==='in'?'amount-in':'amount-out'}">
+          ${t.type==='in'?'+':'−'} ${money(t.amount)}
+        </td>
+        <td><button class="delete-btn" data-delete="${t.id}" title="Excluir">×</button></td>
+      </tr>
+    `).join('') : `
+      <tr><td colspan="6"><div class="empty">
+        Nenhuma movimentação encontrada. Clique em “Nova movimentação” para começar.
+      </div></td></tr>`;
+
+    $('goalList').innerHTML=state.goals.length ? state.goals.map(g=>{
+      const pct=Math.min(100,Math.round(g.saved/g.target*100));
+      return `<div>
+        <div class="goal-top">
+          <strong>${esc(g.name)}</strong>
+          <span>${money(g.saved)} / ${money(g.target)}</span>
+        </div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <div class="goal-foot">
+          <span>${g.date?'Prazo: '+dateBR(g.date):'Sem prazo definido'}</span>
+          <span>${pct}%
+            <button class="delete-btn" data-delete-goal="${g.id}">×</button>
+          </span>
+        </div>
+      </div>`;
+    }).join('') : '<div class="empty">Você ainda não criou metas financeiras.</div>';
+
+    const countIn=tx.filter(t=>t.type==='in').length;
+    $('summaryList').innerHTML=`
+      <div class="goal-top"><span>Saldo líquido</span>
+        <strong class="${incoming>=outgoing?'positive':'negative'}">${money(incoming-outgoing)}</strong>
+      </div>
+      <div class="goal-top"><span>Movimentações registradas</span><strong>${tx.length}</strong></div>
+      <div class="goal-top"><span>Média por entrada</span>
+        <strong>${money(countIn?incoming/countIn:0)}</strong>
+      </div>
+      <div class="goal-top"><span>Entradas comprometidas com saídas</span>
+        <strong>${incoming?Math.round(outgoing/incoming*100)+'%':'—'}</strong>
+      </div>`;
+    renderCharts(tx);
+  }
+
+  function renderCharts(tx){
+    const labels=[],ins=[],outs=[];
+    if(selectedMonth!=='all'){
+      const [y,m]=selectedMonth.split('-');
+      const days=new Date(+y,+m,0).getDate();
+      for(let d=1;d<=days;d++){
+        const key=`${y}-${m}-${String(d).padStart(2,'0')}`;
+        labels.push(String(d));
+        ins.push(tx.filter(t=>t.date===key&&t.type==='in').reduce((s,t)=>s+t.amount,0));
+        outs.push(tx.filter(t=>t.date===key&&t.type==='out').reduce((s,t)=>s+t.amount,0));
+      }
+    } else {
+      const keys=[...new Set(tx.map(t=>t.date.slice(0,7)))].sort().slice(-6);
+      keys.forEach(key=>{
+        const [y,m]=key.split('-');
+        labels.push(new Date(+y,+m-1,1).toLocaleDateString('pt-BR',{
+          month:'short',year:'2-digit'
+        }));
+        ins.push(tx.filter(t=>t.date.startsWith(key)&&t.type==='in').reduce((s,t)=>s+t.amount,0));
+        outs.push(tx.filter(t=>t.date.startsWith(key)&&t.type==='out').reduce((s,t)=>s+t.amount,0));
+      });
+      if(!labels.length){labels.push('Sem dados');ins.push(0);outs.push(0);}
+    }
+    const options={
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label||c.label}: ${money(c.raw)}`}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#8391a8',maxTicksLimit:10},border:{display:false}},
+        y:{beginAtZero:true,grid:{color:'#273248'},ticks:{
+          color:'#8391a8',
+          callback:v=>new Intl.NumberFormat('pt-BR',{notation:'compact'}).format(v)
+        },border:{display:false}}
+      }
+    };
+    if(flowChart) flowChart.destroy();
+    flowChart=new Chart($('flowChart'),{
+      type:'line',
+      data:{labels,datasets:[
+        {label:'Entradas',data:ins,borderColor:'#28d69a',backgroundColor:'#28d69a20',fill:true,tension:.35,borderWidth:2},
+        {label:'Saídas',data:outs,borderColor:'#ff667a',backgroundColor:'#ff667a12',fill:true,tension:.35,borderWidth:2}
+      ]},
+      options
+    });
+    const totalIn=tx.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
+    const totalOut=tx.filter(t=>t.type==='out').reduce((s,t)=>s+t.amount,0);
+    if(distributionChart) distributionChart.destroy();
+    distributionChart=new Chart($('distributionChart'),{
+      type:'doughnut',
+      data:{labels:['Entradas','Saídas'],datasets:[{
+        data:totalIn||totalOut?[totalIn,totalOut]:[1,1],
+        backgroundColor:totalIn||totalOut?['#28d69a','#ff667a']:['#273248','#35435a'],
+        borderWidth:0
+      }]},
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:'72%',
+        plugins:{legend:{display:false},tooltip:{callbacks:{
+          label:c=>totalIn||totalOut?`${c.label}: ${money(c.raw)}`:'Sem movimentações'
+        }}}
+      }
+    });
+  }
+
+  function openModal(id){$(id).classList.add('show');}
+  function closeModal(id){$(id).classList.remove('show');}
+
+  $('newTransaction').addEventListener('click',()=>{
+    $('txDate').value=today();
+    openModal('transactionModal');
+  });
+  ['newGoal','newGoal2'].forEach(id=>
+    $(id).addEventListener('click',()=>openModal('goalModal'))
+  );
+  document.querySelectorAll('[data-close]').forEach(b=>
+    b.addEventListener('click',()=>closeModal(b.dataset.close))
+  );
+  document.querySelectorAll('.overlay').forEach(o=>
+    o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);})
+  );
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape') document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show'));
+  });
+
+  $('transactionForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const amount=Number($('amount').value);
+    if(!Number.isFinite(amount)||amount<=0) return notify('Informe um valor válido.');
+    state.transactions.push({
+      id:Date.now().toString()+Math.random().toString(16).slice(2),
+      description:$('description').value.trim(),
+      type:$('txType').value,
+      category:$('category').value,
+      amount,
+      date:$('txDate').value,
+      notes:$('notes').value.trim(),
+      createdAt:Date.now()
+    });
+    save();
+    selectedMonth='all';
+    $('searchInput').value='';
+    $('typeFilter').value='all';
+    e.target.reset();
+    closeModal('transactionModal');
+    render();
+    notify('Movimentação salva com sucesso!');
+  });
+
+  $('goalForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const target=Number($('goalTarget').value);
+    const saved=Number($('goalSaved').value);
+    if(target<=0||saved<0) return notify('Confira os valores da meta.');
+    state.goals.push({
+      id:Date.now().toString()+Math.random().toString(16).slice(2),
+      name:$('goalName').value.trim(),
+      target,saved,date:$('goalDate').value
+    });
+    save();
+    e.target.reset();
+    $('goalSaved').value='0';
+    closeModal('goalModal');
+    render();
+    notify('Meta criada com sucesso!');
+  });
+
+  $('transactionRows').addEventListener('click',e=>{
+    const b=e.target.closest('[data-delete]');
+    if(!b) return;
+    const t=state.transactions.find(x=>x.id===b.dataset.delete);
+    if(t&&confirm(`Excluir a movimentação “${t.description}”?`)){
+      state.transactions=state.transactions.filter(x=>x.id!==t.id);
+      save();render();notify('Movimentação excluída.');
+    }
+  });
+  $('goalList').addEventListener('click',e=>{
+    const b=e.target.closest('[data-delete-goal]');
+    if(!b) return;
+    const g=state.goals.find(x=>x.id===b.dataset.deleteGoal);
+    if(g&&confirm(`Excluir a meta “${g.name}”?`)){
+      state.goals=state.goals.filter(x=>x.id!==g.id);
+      save();render();notify('Meta excluída.');
+    }
+  });
+
+  $('monthFilter').addEventListener('change',e=>{
+    selectedMonth=e.target.value;render();
+  });
+  $('searchInput').addEventListener('input',render);
+  $('typeFilter').addEventListener('change',render);
+
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('[data-view]').forEach(x=>
+        x.classList.toggle('active',x===b)
+      );
+      const view=b.dataset.view;
+      if(view==='transactions') $('transactionsPanel').scrollIntoView({behavior:'smooth'});
+      else if(view==='goals') $('goalsPanel').scrollIntoView({behavior:'smooth'});
+      else window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+
+  $('year').textContent=new Date().getFullYear();
+  $('txDate').value=today();
+  render();
+})();
+</script>
+</body>
+</html>
+
+</body>
+</html>
+
+</div>
